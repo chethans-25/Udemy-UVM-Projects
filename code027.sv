@@ -255,39 +255,14 @@ module uart_tx(
     end
  ///////////////////////////////////////////////////////////////////////////////////////////////////////////
  
- 
+//  counter logic
  always@(posedge tx_clk)
  begin
  case(state)
-   idle : begin
-     count <= 0;
-   end
-   
-  start_bit : begin
-    count  <= 0;
-  end 
   
-  send_data: begin
-    count <= count + 1;
-  end
-   
-  send_parity: begin
-     count <= 0;
-  end 
- 
-  send_first_stop : begin
-    count <= 0;
-  end
- 
-  send_sec_stop : begin
-    count <= 0;
-  end
+  send_data: count <= count + 1;
   
-  done : begin
-    count <= 0;
-  end
-  
-    default : count <= 0;
+  default : count <= 0;
      
  endcase
  end

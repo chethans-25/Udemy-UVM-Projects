@@ -19,7 +19,18 @@ endclass
  
 //////////////////////////////////////////////////////////
  
-typedef enum bit [3:0]   {rand_baud_1_stop = 0, rand_length_1_stop = 1, length5wp = 2, length6wp = 3, length7wp = 4, length8wp = 5, length5wop = 6, length6wop = 7, length7wop = 8, length8wop = 9,rand_baud_2_stop = 11, rand_length_2_stop = 12} oper_mode;
+typedef enum bit [3:0]   {rand_baud_1_stop = 0,               
+                          rand_length_1_stop = 1,             
+                          length5wp = 2, 
+                          length6wp = 3, 
+                          length7wp = 4, 
+                          length8wp = 5,                      //wp is with parity
+                          length5wop = 6,                     //wop is without parity
+                          length6wop = 7, 
+                          length7wop = 8, 
+                          length8wop = 9,
+                          rand_baud_2_stop = 11, 
+                          rand_length_2_stop = 12} oper_mode;
  
  
 class transaction extends uvm_sequence_item;
@@ -30,7 +41,7 @@ class transaction extends uvm_sequence_item;
          logic rst;
     rand logic [7:0] tx_data;
     rand logic [16:0] baud;
-    rand logic [3:0] length; 
+    rand logic [3:0] length;
     rand logic parity_type, parity_en;
          logic stop2;
          logic tx_done, rx_done, tx_err, rx_err;
@@ -69,7 +80,7 @@ class rand_baud extends uvm_sequence#(transaction);
         assert(tr.randomize);
         tr.op     = rand_baud_1_stop;
         tr.length = 8;
-        tr.baud   = 9600;
+        tr.baud   = 9600;    //why initializing baud to 9600? because if we randomize baud then we will not be able to predict the time of transmission and reception and we will not be able to synchronize the driver and monitor. so we are initializing baud to 9600 and randomizing it in the next sequence.
         tr.rst       = 1'b0;
         tr.tx_start  = 1'b1;
         tr.rx_start  = 1'b1;

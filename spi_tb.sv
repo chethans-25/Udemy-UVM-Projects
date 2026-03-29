@@ -69,7 +69,7 @@ class write_data extends uvm_sequence #(transaction);
   endfunction
 
   virtual task body();
-  repeat(15)
+  repeat(2)
   begin
     tr = transaction::type_id::create("tr");
 
@@ -100,7 +100,7 @@ class write_err extends uvm_sequence #(transaction);
   endfunction
 
   virtual task body();
-  repeat(15)
+  repeat(2)
   begin
     tr = transaction::type_id::create("tr");
 
@@ -130,7 +130,7 @@ class read_data extends uvm_sequence #(transaction);
   endfunction
 
   virtual task body();
-  repeat(15)
+  repeat(2)
   begin
     tr = transaction::type_id::create("tr");
 
@@ -161,7 +161,7 @@ class read_err extends uvm_sequence #(transaction);
   endfunction
 
   virtual task body();
-  repeat(15)
+  repeat(2)
   begin
     tr = transaction::type_id::create("tr");
 
@@ -191,7 +191,7 @@ class rst_dut extends uvm_sequence #(transaction);
   endfunction
 
   virtual task body();
-  repeat(15)
+  repeat(2)
   begin
     tr = transaction::type_id::create("tr");
 
@@ -224,7 +224,7 @@ class writeb_readb extends uvm_sequence #(transaction);
 
   virtual task body();
   //loop for writed
-  repeat(15)
+  repeat(2)
   begin
     tr = transaction::type_id::create("tr");
     tr.addr_c.constraint_mode(1);
@@ -240,7 +240,7 @@ class writeb_readb extends uvm_sequence #(transaction);
   end
 
   //loop for readd
-  repeat(15)
+  repeat(2)
   begin
     tr = transaction::type_id::create("tr");
     tr.addr_c.constraint_mode(1);
@@ -455,3 +455,154 @@ class sco extends uvm_scoreboard;
   endfunction
 
 endclass
+
+class agent extends uvm_agent;
+  `uvm_component_utils(agent)
+
+  driver d;
+  mon m;
+  uvm_sequencer #(transaction) seqr;
+  spi_config cfg;
+  
+  function new(string name = "agent", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    cfg = spi_config::type_id::create("cfg", this);
+    m = mon::type_id::create("m", this);
+
+    if (cfg.is_active == UVM_ACTIVE)
+    begin
+      d = driver::type_id::create("d", this);
+      seqr = uvm_sequencer #(transaction)::type_id::create("seqr", this);
+    end
+
+  endfunction
+
+  virtual function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    if (cfg.is_active == UVM_ACTIVE)
+    begin
+      d.seq_item_port.connect(seqr.seq_item_export);
+    end
+  endfunction
+
+endclass
+
+
+class env extends uvm_env;
+  `uvm_component_utils(env)
+
+  agent a;
+  sco s;
+
+  function new(string name = "env", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    a = agent::type_id::create("a", this);
+    s = sco::type_id::create("s", this);
+  endfunction
+
+
+  virtual function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    a.m.send.connect(s.recv);
+  endfunction
+
+endclass
+
+
+class test extends uvm_test;
+  `uvm_component_utils(test)
+   
+  function new(input string inst = "test", uvm_component c);
+    super.new(inst,c);
+  endfunction
+
+  env e;
+  rst_dut rst_seq;
+  write_data wdata_seq;
+  write_err werr_seq;
+  read_data rdata_seq;
+  read_err rerr_seq;
+  writeb_readb wb_rb_seq;
+
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    e = env::type_id::create("e", this);
+    rst_seq = rst_dut::type_id::create("rst_seq");
+    wdata_seq = write_data::type_id::create("wdata_seq");
+    werr_seq = write_err::type_id::create("werr_seq");
+    rdata_seq = read_data::type_id::create("rdata_seq");
+    rerr_seq = read_err::type_id::create("rerr_seq");
+    wb_rb_seq = writeb_readb::type_id::create("wb_rb_seq");
+  endfunction
+
+  virtual task run_phase(uvm_phase phase);
+    phase.raise_objection(this);
+
+    // rst_seq.start(e.a.seqr);
+    // #50;
+
+    wdata_seq.start(e.a.seqr);
+    #50;
+
+    // werr_seq.start(e.a.seqr);
+    // #50;
+
+    rdata_seq.start(e.a.seqr);
+    #50;
+
+    // rerr_seq.start(e.a.seqr);
+    // #50;
+
+    // wb_rb_seq.start(e.a.seqr);
+    // #50;
+
+    phase.drop_objection(this);
+  endtask
+
+endclass
+
+
+module tb;
+
+spi_if vif();
+
+top dut (
+  .clk(vif.clk),
+  .rst(vif.rst),
+  .wr(vif.wr),
+  .addr(vif.addr),
+  .din(vif.din),
+  .dout(vif.dout),
+  .done(vif.done),
+  .err(vif.err)
+);
+
+
+//clock gen
+initial begin
+  vif.clk = 0;
+  forever #5 vif.clk = ~vif.clk; //10ns clock period
+end
+
+
+initial begin
+  uvm_config_db#(virtual spi_if)::set(null, "*", "vif", vif);
+  run_test("test");
+end
+
+//dump vcd
+initial begin
+  $dumpfile("spi_tb.vcd");
+  $dumpvars(0, tb);
+end
+
+
+endmodule

@@ -246,7 +246,7 @@ class driver extends uvm_driver #(transaction);
   task reset_dut(); 
     begin
     `uvm_info("DRV", "System Reset : Start of Simulation", UVM_MEDIUM);
-    vif.resetn      <= 1'b0;  ///active high reset
+    vif.resetn      <= 1'b0;  ///active low reset
     vif.awvalid     <= 1'b0;
     vif.awid        <= 1'b0;
     vif.awlen       <= 0;
